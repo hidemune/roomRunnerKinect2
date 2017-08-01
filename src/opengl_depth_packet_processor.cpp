@@ -1024,6 +1024,7 @@ void OpenGLDepthPacketProcessor::process(const DepthPacket &packet)
   //Hidemune
   //*
   //スコアの重心を出せそう。
+  double meshcnt = 0;
   double jx = 0;
   double jy = 0;
   long secnow = std::time(nullptr);
@@ -1053,11 +1054,12 @@ void OpenGLDepthPacketProcessor::process(const DepthPacket &packet)
       if (500 < dist && dist < 2000) {
         jx = jx + static_cast<double>(x);
         jy = jy + static_cast<double>(y);
+        meshcnt++;
       }
     }
   }
-  jy = jy / 512 / 424 ;
-  jx = jx / 512 / 424 ;
+  jy = jy / meshcnt ;
+  jx = jx / meshcnt ;
   //std::cout << "ZAHYOU\t" << jx << "\t" << jy << "\t" << secnow << "\n";
   if (secnow == sec) {
     if (maxx < jx) maxx = jx;
@@ -1069,7 +1071,7 @@ void OpenGLDepthPacketProcessor::process(const DepthPacket &packet)
     std::cout << "ZAHYOU\t" << maxx << "\t" << maxy << "\t" << secnow << "\n";
     //VLC Z-Order
 system("xdotool search --name 'vlc with Kinect2' windowactivate &");
-    if ((maxx - minx) > 1 || (maxy - miny) > 1) {
+    if ((maxx - minx) > 2 || (maxy - miny) > 2) {
       std::cout << "running...\t" << (maxx - minx) << "\t" << (maxy - miny) << "\t" << "\n";
       if (!now) {system("xte \"str s\" &"); }
       now = true;
