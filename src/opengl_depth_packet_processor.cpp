@@ -60,6 +60,17 @@ long miny = 99999999;
 long sec = 0;
 bool now = true;
 
+long prex = 0;
+long prey = 0;
+long maxxL = 0;
+long minxL = 99999999;
+long maxyL = 0;
+long minyL = 99999999;
+long maxxR = 0;
+long minxR = 99999999;
+long maxyR = 0;
+long minyR = 99999999;
+
 struct ChangeCurrentOpenGLContext
 {
   GLFWwindow *last_ctx;
@@ -1025,8 +1036,14 @@ void OpenGLDepthPacketProcessor::process(const DepthPacket &packet)
   //*
   //スコアの重心を出せそう。
   double meshcnt = 0;
+  double meshcntL = 0;
+  double meshcntR = 0;
   double jx = 0;
   double jy = 0;
+  double jxL = 0;
+  double jyL = 0;
+  double jxR = 0;
+  double jyR = 0;
   long secnow = std::time(nullptr);
   std::string str = ">>>";
   for (int y=0; y<424; y++) {
@@ -1055,23 +1072,59 @@ void OpenGLDepthPacketProcessor::process(const DepthPacket &packet)
         jx = jx + static_cast<double>(x);
         jy = jy + static_cast<double>(y);
         meshcnt++;
+        //左右分割で同様に
+        if (x < prex) {
+          jxL = jxL + static_cast<double>(x);
+          jyL = jyL + static_cast<double>(y);
+          meshcntL++;
+        }else{
+          jxR = jxR + static_cast<double>(x);
+          jyR = jyR + static_cast<double>(y);
+          meshcntR++;
+        }
       }
     }
   }
   jy = jy / meshcnt ;
   jx = jx / meshcnt ;
+  jyR = jyR / meshcntR ;
+  jxR = jxR / meshcntR ;
+  jyL = jyL / meshcntL ;
+  jxL = jxL / meshcntL ;
   //std::cout << "ZAHYOU\t" << jx << "\t" << jy << "\t" << secnow << "\n";
   if (secnow == sec) {
     if (maxx < jx) maxx = jx;
     if (minx > jx) minx = jx;
     if (maxy < jy) maxy = jy;
     if (miny > jy) miny = jy;
+    //左右分割で同様に
+    if (maxxL < jxL) maxxL = jxL;
+    if (minxL > jxL) minxL = jxL;
+    if (maxyL < jyL) maxyL = jyL;
+    if (minyL > jyL) minyL = jyL;
+    
+    if (maxxR < jxR) maxxR = jxR;
+    if (minxR > jxR) minxR = jxR;
+    if (maxyR < jyR) maxyR = jyR;
+    if (minyR > jyR) minyR = jyR;
+
   } else {
+  /*
     std::cout << "ZAHYOU\t" << minx << "\t" << miny << "\t" << secnow << "\n";
     std::cout << "ZAHYOU\t" << maxx << "\t" << maxy << "\t" << secnow << "\n";
+    std::cout << "ZAHYOU\t" << minxL << "\t" << minyL << "\t" << secnow << "\n";
+    std::cout << "ZAHYOU\t" << maxxL << "\t" << maxyL << "\t" << secnow << "\n";
+    std::cout << "ZAHYOU\t" << minxR << "\t" << minyR << "\t" << secnow << "\n";
+    std::cout << "ZAHYOU\t" << maxxR << "\t" << maxyR << "\t" << secnow << "\n";
+    */
     //VLC Z-Order
 system("xdotool search --name 'vlc with Kinect2' windowactivate &");
-    if ((maxx - minx) > 2 || (maxy - miny) > 2) {
+    std::cout << "scoreR...\t" << (maxxR - minxR) << "\t" << (maxyR - minyR) << "\t" << "\n";
+    std::cout << "scoreL...\t" << (maxxL - minxL) << "\t" << (maxyL - minyL) << "\t" << "\n";
+
+    if ((maxx - minx) > 3 || (maxy - miny) > 3 ||
+    (maxxR - minxR) > 3 || (maxyR - minyR) > 3 ||
+    (maxxL - minxL) > 3 || (maxyL - minyL) > 3) {
       std::cout << "running...\t" << (maxx - minx) << "\t" << (maxy - miny) << "\t" << "\n";
       if (!now) {system("xte \"str s\" &"); }
       now = true;
@@ -1080,11 +1133,27 @@ system("xdotool search --name 'vlc with Kinect2' windowactivate &");
       if (now) { system("xte \"str t\" &"); }
       now = false;
     }
+    //次回の左右分割用
+    prex = (maxx + minx) / 2;
+    prey = (maxy + miny) / 2;
+    std::cout << "preJX\t" << prex << "\n";
+    
     sec = secnow;
     maxx = 0;
     minx = 99999999;
     maxy = 0;
     miny = 99999999;
+    
+    maxxL = 0;
+    minxL = 99999999;
+    maxyL = 0;
+    minyL = 99999999;
+    
+    maxxR = 0;
+    minxR = 99999999;
+    maxyR = 0;
+    minyR = 99999999;
+    
   }
 
 /*
