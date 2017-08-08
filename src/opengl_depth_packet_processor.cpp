@@ -47,10 +47,21 @@ for (GLenum glerror = glGetError(); glerror != GL_NO_ERROR; glerror = glGetError
   LOG_ERROR << "line " << __LINE__ << ": GL error " << glerror; \
 } while(0)
 
+#include <time.h>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
 
+using namespace std;
 
 namespace libfreenect2
 {
+
+double second = 0;
 
 long idxcnt = 0;
 long maxx = 0;
@@ -1000,6 +1011,27 @@ void OpenGLDepthPacketProcessor::loadLookupTable(const short *lut)
   impl_->lut11to16.upload();
 }
 
+vector<string> split(const string &s, char delim) {
+    vector<string> elems;
+    stringstream ss(s);
+    string item;
+    while (getline(ss, item, delim)) {
+    if (!item.empty()) {
+            elems.push_back(item);
+        }
+    }
+    return elems;
+}
+int get_file_size(std::string filename) // path to file
+{
+    FILE *p_file = NULL;
+    p_file = fopen(filename.c_str(),"rb");
+    fseek(p_file,0,SEEK_END);
+    int size = ftell(p_file);
+    fclose(p_file);
+    return size;
+}
+
 void OpenGLDepthPacketProcessor::process(const DepthPacket &packet)
 {
   if (!listener_)
@@ -1109,14 +1141,69 @@ void OpenGLDepthPacketProcessor::process(const DepthPacket &packet)
     if (minyR > jyR) minyR = jyR;
 
   } else {
-  /*
-    std::cout << "ZAHYOU\t" << minx << "\t" << miny << "\t" << secnow << "\n";
-    std::cout << "ZAHYOU\t" << maxx << "\t" << maxy << "\t" << secnow << "\n";
-    std::cout << "ZAHYOU\t" << minxL << "\t" << minyL << "\t" << secnow << "\n";
-    std::cout << "ZAHYOU\t" << maxxL << "\t" << maxyL << "\t" << secnow << "\n";
-    std::cout << "ZAHYOU\t" << minxR << "\t" << minyR << "\t" << secnow << "\n";
-    std::cout << "ZAHYOU\t" << maxxR << "\t" << maxyR << "\t" << secnow << "\n";
-    */
+    //vlcなかったら終了処理 pgrep -f vlc
+    char file[1024];
+    file[0] = 0;
+    FILE *f = popen("ps aux | grep vlc | grep -v grep", "r");
+    if (fgets(file, 1024, f) != NULL) {
+      //printf("%s", file);
+    } else {
+      //VLC なし。終了処理
+      system("xdotool search --name 'Viewer' windowactivate &");
+      system("xte \"key Escape\" &");
+      //カロリー計算
+      double waight = 100;
+      if( access( "roomrunner.csv", F_OK ) != -1 ) {
+          // file exists
+          char last_line[1024];
+
+          FILE *fd;
+          if ((fd = fopen("roomrunner.csv", "r")) != NULL) // open file
+          {
+              int flen = get_file_size("roomrunner.csv");
+              char buff[flen+1];
+              int buff_len = flen;
+              std::cout << "len...\t" << flen << "\n";
+              
+              fseek(fd, 0, SEEK_SET); // make sure start from 0
+              while(!feof(fd))
+              {
+                  memset(buff, 0x00, buff_len); // clean buffer
+                  fscanf(fd, "%[^\n]\n", buff); // read file *prefer using fscanf
+              }
+              printf("Last Line :: %s\n", buff);
+              sprintf(last_line, "%s", buff); 
+          }
+          vector<string> elem = split(last_line, '\t');
+          std::cout << "weightGet...\t" << elem[2] << "\n";
+          waight = atoi(elem[2].c_str());
+      } else {
+          // file doesn't exist
+         ofstream fs1("roomrunner.csv",  ios::out | ios::app);
+         fs1 << "DATE\tTIME" << "\t"  << "kg(weight)" << "\t" << "sec" << "\t" << "kcal" << "\t" << endl;
+      }
+      double kcal = waight * second / 60 * 140 / 1000;
+          struct tm *date;
+          time_t now;
+          int year, month, day;
+          int hour, minute, secondd;
+          time(&now);
+          date = localtime(&now);
+          year = date->tm_year + 1900;
+          month = date->tm_mon + 1;
+          day = date->tm_mday;
+          hour = date->tm_hour;
+          minute = date->tm_min;
+          secondd = date->tm_sec;
+          char datestr[1024] ;
+          sprintf(datestr, "%04d/%02d/%02d\t%02d:%02d:%02d", year, month, day, hour, minute, secondd);
+          
+    //csv output
+     ofstream fs1("roomrunner.csv",  ios::out | ios::app);
+     fs1 << datestr << "\t"  << waight << "\t" << second << "\t" << kcal << "\t" << endl;
+      //exit(0);
+    }
+
     //VLC Z-Order
 system("xdotool search --name 'vlc with Kinect2' windowactivate &");
     std::cout << "scoreR...\t" << (maxxR - minxR) << "\t" << (maxyR - minyR) << "\t" << "\n";
@@ -1126,6 +1213,7 @@ system("xdotool search --name 'vlc with Kinect2' windowactivate &");
     (maxxR - minxR) > 3 || (maxyR - minyR) > 3 ||
     (maxxL - minxL) > 3 || (maxyL - minyL) > 3) {
       std::cout << "running...\t" << (maxx - minx) << "\t" << (maxy - miny) << "\t" << "\n";
+      second++;
       if (!now) {system("xte \"str s\" &"); }
       now = true;
     }else{
@@ -1155,69 +1243,13 @@ system("xdotool search --name 'vlc with Kinect2' windowactivate &");
     minyR = 99999999;
     
   }
+      if(!listener_->onNewFrame(Frame::Ir, ir))
+        delete ir;
 
-/*
-  idxcnt++;
-if ((idxcnt % 4) == 0) {
-  //スコアの重心を出せそう。
-  double jx = 0;
-  double jy = 0;
-double meshcnt = 0;
-  long secnow = std::time(nullptr);
-  for (int y=50; y<424-50; y=y+2) {
-    for (int x=50; x<512-50; x=x+2) {
-      double distance = (static_cast<unsigned char>(packet.buffer[(y*512+x)*2+1])*256
-                       + static_cast<unsigned char>(packet.buffer[(y*512+x)*2]));
-      double distance2 = (static_cast<unsigned char>(packet.buffer[(y*512+x)*2])*256
-                       + static_cast<unsigned char>(packet.buffer[(y*512+x)*2+1]));
-      if (500 < distance2 && distance2 < 1200) {
-        meshcnt++;
-        jx = jx + static_cast<double>(x);
-        jy = jy + static_cast<double>(y);
-      }
+      if(!listener_->onNewFrame(Frame::Depth, depth))
+        delete depth;
     }
-  }
-  jy = jy / 512 / 424 * 400;
-  jx = jx / 512 / 424 * 400;
-  //std::cout << "ZAHYOU\t" << jx << "\t" << jy << "\t" << secnow << "\n";
-  if (secnow == sec) {
-    if (maxx < jx) maxx = jx;
-    if (minx > jx) minx = jx;
-    if (maxy < jy) maxy = jy;
-    if (miny > jy) miny = jy;
-  } else {
-      double center = (static_cast<unsigned char>(packet.buffer[(424/2*512+512/2)*2+1])*256
-                       + static_cast<unsigned char>(packet.buffer[(424/2*512+512)*2]));
-      
-      std::cout << "center...\t" << center << "\n";
 
-      double center2 = (static_cast<unsigned char>(packet.buffer[(424/2*512+512/2)*2])*256
-                       + static_cast<unsigned char>(packet.buffer[(424/2*512+512)*2+1]));
-      
-      std::cout << "cente2...\t" << center2 << "\n";
 
-    if ((maxx - minx) > 50 || (maxy - miny) > 50) {
-      std::cout << "running...\t" << (maxx - minx) << "\t" << (maxy - miny) << "\t" << meshcnt << "\n";
-      if (!now) system("xte \"str s\" &");
-      now = true;
-    }else{
-      std::cout << "stop......\t" << (maxx - minx) << "\t" << (maxy - miny) << "\t" << meshcnt << "\n";
-      if (now) system("xte \"str t\" &");
-      now = false;
-    }
-    sec = secnow;
-    maxx = 0;
-    minx = 99999999;
-    maxy = 0;
-    miny = 99999999;
-  }
-}
-// */
-  if(!listener_->onNewFrame(Frame::Ir, ir))
-    delete ir;
-
-  if(!listener_->onNewFrame(Frame::Depth, depth))
-    delete depth;
-}
 
 } /* namespace libfreenect2 */
