@@ -1174,6 +1174,7 @@ void OpenGLDepthPacketProcessor::process(const DepthPacket &packet)
               printf("Last Line :: %s\n", buff);
               sprintf(last_line, "%s", buff); 
           }
+          fclose(fd);
           vector<string> elem = split(last_line, '\t');
           std::cout << "weightGet...\t" << elem[2] << "\n";
           waight = atoi(elem[2].c_str());
@@ -1201,8 +1202,10 @@ void OpenGLDepthPacketProcessor::process(const DepthPacket &packet)
     //csv output
      ofstream fs1("roomrunner.csv",  ios::out | ios::app);
      fs1 << datestr << "\t"  << waight << "\t" << second << "\t" << kcal << "\t" << endl;
+     fs1.close();
       //exit(0);
     }
+    pclose(f);
 
     //VLC Z-Order
 system("xdotool search --name 'vlc with Kinect2' windowactivate &");
