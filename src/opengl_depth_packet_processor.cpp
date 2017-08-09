@@ -1212,9 +1212,9 @@ system("xdotool search --name 'vlc with Kinect2' windowactivate &");
     std::cout << "scoreR...\t" << (maxxR - minxR) << "\t" << (maxyR - minyR) << "\t" << "\n";
     std::cout << "scoreL...\t" << (maxxL - minxL) << "\t" << (maxyL - minyL) << "\t" << "\n";
 
-    if ((maxx - minx) > 3 || (maxy - miny) > 3 ||
-    (maxxR - minxR) > 3 || (maxyR - minyR) > 3 ||
-    (maxxL - minxL) > 3 || (maxyL - minyL) > 3) {
+    if ((maxx - minx) > 2 || (maxy - miny) > 2 ||
+    (maxxR - minxR) > 2 || (maxyR - minyR) > 2 ||
+    (maxxL - minxL) > 2 || (maxyL - minyL) > 2) {
       std::cout << "running...\t" << (maxx - minx) << "\t" << (maxy - miny) << "\t" << "\n";
       second++;
       if (!now) {system("xte \"str s\" &"); }
